@@ -2,6 +2,7 @@
 
 ## In Development
 * Add option to define config.js for st2web (#165) (by @moonrail)
+* Add an option to mount NFS volumes instead of using the `st2packs` image (#118) (by @AngryDevelopper)
 
 ## v0.51.0
 * Added Redis with Sentinel to replace etcd as a coordination backend (#169)
