@@ -1,7 +1,27 @@
 # Changelog
 
 ## In Development
+* Add option to define config.js for st2web (#165) (by @moonrail)
 * Add an option to mount NFS volumes instead of using the `st2packs` image (#118) (by @AngryDevelopper)
+
+## v0.51.0
+* Added Redis with Sentinel to replace etcd as a coordination backend (#169)
+
+## v0.50.0
+* Drop Helm `v2` support and fully migrate to Helm `v3` (#163)
+* Switch dependencies from deprecated `helm/charts` to new Bitnami Subcharts (#163)
+
+## v0.41.0
+* Fix Helm 2 repository location to a new working URL https://charts.helm.sh/stable (#164) (by @manisha-tanwar)
+
+## v0.40.0
+* Switch st2 version to `v3.4dev` as a new latest development version (#157)
+* Disable Enterprise testing in CI (#157)
+* Change pullPolicy to "IfNotPresent", as Docker-Hub Ratelimits now (#159) (by @moonrail)
+* Update `rabbitmq-ha` 3rd party chart from `1.44.1` to `1.46.1` (#158) (by @moonrail)
+* Enable `rabbitmqErlangCookie` for `rabbitmq-ha` by default, to ensure cluster-redeployments do not fail (#158) (by @moonrail)
+* Add `forceBoot` for `rabbitmq-ha` by default, to ensure cluster-redeployments do not fail due to unclean exits (#158) (by @moonrail)
+* Add option to define pull secret for st2 images (#162) (by @moonrail)
 
 ## v0.32.0
 * Fix a bug when datastore encrypted keys didn't work in scheduled rules. datastore_crypto_key is now shared with the ``st2scheduler`` pods (#148) (by @rahulshinde26)
@@ -36,6 +56,7 @@
 * Fix st2web ingress which should have been defined as an Integer instead of a String (#111) (by @erenatas)
 * Add an option to inject hostAliases in the st2actionrunner containers (#114)
 * Add support for Service Accounts (#117) (by @Vince-Chenal)
+* Add an option to mount NFS volumes instead of using the `st2packs` image (#118) (by @AngryDevelopper)
 
 ## v0.24.0
 * Fix st2web ingress to use `/` path by default instead of `/*`, useful for nginx ingress controller (#103) (by @erenatas)

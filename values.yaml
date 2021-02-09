@@ -5,13 +5,17 @@
 ## Docker image settings, applied to all StackStorm pods
 ##
 image:
-  # Image pull policy. Change to "IfNotPresent" when switching to stable images
-  pullPolicy: Always
+  # Image pull policy
+  pullPolicy: IfNotPresent
   # st2 image repository. Set this to override the default ("stackstorm") or enterprise
   # docker image repository ("docker.stackstorm.com"). Applies to all st2 containers except
   # st2chatops and st2packs (which have their own override). This also does not impact 
   # dependencies such as mongo or redis, which have their own helm chart settings.
   repository: ""
+  # Image pull secret.
+  # May be required for public docker hub due to rate limiting or any private repository.
+  # See: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  #pullSecret: "your-pull-secret"
 
 
 ##
@@ -99,7 +103,7 @@ st2:
       #repository: your-remote-docker-registry.io
       name: st2packs
       tag: latest
-      pullPolicy: Always
+      pullPolicy: IfNotPresent
       # Optional name of the imagePullSecret if your custom packs image is hosted by a private Docker registry behind the auth
       #pullSecret: st2packs-auth
 
@@ -261,6 +265,10 @@ st2web:
   affinity: {}
   serviceAccount:
     attach: false
+  # User-defined st2web config with custom settings to replace default config.js
+  # See https://github.com/StackStorm/st2web#connecting-to-st2-server for more info
+  # config: |
+  #  // see https://github.com/StackStorm/st2web/blob/master/config.js
 # https://docs.stackstorm.com/reference/ha.html#st2auth
 # Multiple st2auth processes can be behind a load balancer in an active-active configuration.
 st2auth:
@@ -415,7 +423,7 @@ st2chatops:
     #name: st2chatops
     ## Note that Helm templating is supported in this block!
     #tag: "{{ .Chart.AppVersion }}"
-    #pullPolicy: Always
+    #pullPolicy: IfNotPresent
   # Tested requested resource consumption for st2chatops & hubot in normal mode
   # Please adjust based on your conscious choice
   resources:
@@ -433,74 +441,115 @@ st2chatops:
 ## MongoDB HA configuration (3rd party chart dependency)
 ##
 ## For values.yaml reference:
-## https://github.com/helm/charts/tree/master/stable/mongodb-replicaset
+## https://github.com/bitnami/charts/tree/master/bitnami/mongodb
 ##
-# Specs for the MongoDB image
-mongodb-ha:
+mongodb:
   # Change to `false` to disable in-cluster mongodb deployment.
   # Specify your external [database] connection parameters under st2.config
   enabled: true
   image:
     # StackStorm currently supports maximum MongoDB v4.0
     tag: "4.0"
+  # MongoDB architecture. Allowed values: standalone or replicaset
+  architecture: replicaset
+  # Name of the replica set
+  # Ignored when mongodb.architecture=standalone
+  replicaSetName: rs0
+  # Number of MongoDB replicas to deploy.
+  # Ignored when mongodb.architecture=standalone
+  replicaCount: 3
   auth:
     enabled: true
-    # NB! It's highly recommended to change ALL defaults!
-    adminUser: "admin"
-    adminPassword: "XeL5Rxwj7F0Wt43tFZVTN7H8Sg5XDHmK"
+    # NB! It's highly recommended to change ALL insecure auth defaults!
+    #
+    # Stackstorm user that services will make connections using
+    username: "st2-admin"
+    # Stackstorm user that services will make connections using
+    password: "XeL5Rxwj7F0Wt43tFZVTN7H8Sg5XDHmK"
+    # Root password for the database
+    rootPassword: "8fAzdnksdzPFUWm4a68EfY7nMhBPaa"
+    # Initial database for stackstorm
+    database: "st2"
     # Minimal key length is 6 symbols
-    key: "82PItDpqroti5RngOA7UqbHH7c6bFUwy"
+    replicaSetKey: "82PItDpqroti5RngOA7UqbHH7c6bFUwy"
+    # Whether to enable the arbiter
+  arbiter:
+    enabled: false
   resources: {}
 
 ##
-## RabbitMQ HA configuration (3rd party chart dependency)
+## RabbitMQ configuration (3rd party chart dependency)
 ##
 ## For values.yaml reference:
-## https://github.com/helm/charts/tree/master/stable/rabbitmq-ha
+## https://github.com/bitnami/charts/tree/master/bitnami/rabbitmq
 ##
-rabbitmq-ha:
+rabbitmq:
   # Change to `false` to disable in-cluster rabbitmq deployment.
   # Specify your external [messaging] connection parameters under st2.config
   enabled: true
-  rabbitmqUsername: admin
-  # TODO: Use default random 24 character password, but need to fetch this string for use by downstream services
-  rabbitmqPassword: 9jS+w1u07NbHtZke1m+jW4Cj
+  clustering:
+    # On unclean cluster restarts forceBoot is required to cleanup Mnesia tables (see: https://github.com/helm/charts/issues/13485)
+    # Use it only if you prefer availability over integrity.
+    forceBoot: true
+  # Authentication Details
+  auth:
+    username: admin
+    # TODO: Use default random 10 character password, but need to fetch this string for use by downstream services
+    password: 9jS+w1u07NbHtZke1m+jW4Cj
+    # Up to 255 character string, should be fixed so that re-deploying the chart does not fail (see: https://github.com/helm/charts/issues/12371)
+    # NB! It's highly recommended to change the default insecure rabbitmqErlangCookie value!
+    erlangCookie: 8MrqQdCQ6AQ8U3MacSubHE5RqkSfvNaRHzvxuFcG
   # RabbitMQ Memory high watermark. See: http://www.rabbitmq.com/memory.html
   # Default values might not be enough for StackStorm deployment to work properly. We recommend to adjust these settings for you needs as well as enable Pod memory limits via "resources".
   #rabbitmqMemoryHighWatermark: 512MB
   #rabbitmqMemoryHighWatermarkType: absolute
-  # Up to 255 character string, should be fixed so that re-deploying the chart does not fail (see: https://github.com/helm/charts/issues/12371)
-  #rabbitmqErlangCookie: 8MrqQdCQ6AQ8U3MacSubHE5RqkSfvNaRHzvxuFcG
-  persistentVolume:
+  persistence:
     enabled: true
-  # RabbitMQ application vhost, should match with 'ha' Queue Mirroring definition policy
-  rabbitmqVhost: "/"
-  definitions:
-    # Enable Queue Mirroring between nodes
-    # See https://www.rabbitmq.com/ha.html
-    policies: '{"vhost":"/","name":"ha","pattern":"", "definition":{"ha-mode":"all","ha-sync-mode":"automatic","ha-sync-batch-size":10}}'
+  # Enable Queue Mirroring between nodes
+  # See https://www.rabbitmq.com/ha.html
+  # This code block is commented out waiting for 
+  # https://github.com/bitnami/charts/issues/4635
+  loadDefinition:
+    enabled: true
+    existingSecret: "{{ .Release.Name }}-rabbitmq-definitions"
+  extraConfiguration: |
+    load_definitions = /app/rabbitmq-definitions.json
   # We recommend to set the memory limit for RabbitMQ-HA Pods in production deployments.
   # Make sure to also change the rabbitmqMemoryHighWatermark following the formula:
   # rabbitmqMemoryHighWatermark = 0.4 * resources.limits.memory
   resources: {}
+  # number of replicas in the rabbit cluster
+  replicaCount: 3
+  # As RabbitMQ enabled prometheus operator monitoring by default, disable it for non-prometheus users
+  metrics:
+    enabled: false
 
 ##
-## Etcd HA configuration (3rd party chart dependency)
+## Redis HA configuration (3rd party chart dependency)
 ##
 ## For values.yaml reference:
-## https://github.com/helm/charts/tree/master/stable/etcd-operator
+## https://github.com/bitnami/charts/tree/master/bitnami/redis
 ##
-etcd-operator:
-  # we don't need backup & restore etcd for short-lived coordination operations
-  # Change to `false` to disable in-cluster ectd deployment.
+redis:
+  # Change to `false` to disable in-cluster redis deployment.
   # Specify your external [coordination] connection parameters under st2.config
   enabled: true
-  deployments:
-    backupOperator: false
-    restoreOperator: false
-  customResources:
-    # create default etcd cluster
-    createEtcdClusterCRD: true
+  # By default the cluster is enabled for the subchart.
+  # We just need replica count here to ensure it is HA
+  cluster:
+    slaveCount: 3
+  # ## Sentinel settings. Sentinel is enabled for better resiliency.
+  # ## This is highly recommended as per tooz library documentation. 
+  # ## Hence, the chart requires the setting.
+  # ## https://docs.openstack.org/tooz/latest/user/drivers.html#redis
+  # ## https://github.com/bitnami/charts/tree/master/bitnami/redis#master-slave-with-sentinel
+  sentinel:
+    enabled: true
+  networkPolicy:
+    enabled: false
+  usePassword: false
+  metrics:
+    enabled: false
 
 ##
 ## External DNS configuration (3rd party chart dependency)
@@ -508,11 +557,12 @@ etcd-operator:
 ## Creates a deployment of external-dns within the cluster to update DNS with CNAME -> ELB
 ##
 ## For values.yaml reference:
-## https://github.com/helm/charts/tree/master/stable/external-dns
+## https://github.com/bitnami/charts/tree/master/bitnami/external-dns
 ##
 ## TODO: If eq st2web.service.type "LoadBalancer", set enabled to true. Any other cases?
 external-dns:
   enabled: false
+  provider: aws
   aws:
     zoneType: "public"
   domainFilters: []
