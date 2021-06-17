@@ -1236,8 +1236,6 @@ spec:
         - name: st2-rbac-mappings-vol
           mountPath: /opt/stackstorm/rbac/mappings/
         {{- end }}
-        - name: st2-pack-configs-vol
-          mountPath: /opt/stackstorm/configs/
         - name: st2client-config-vol
           mountPath: /root/.st2/
         - name: st2-ssh-key-vol
@@ -1248,6 +1246,7 @@ spec:
           readOnly: true
         {{- end }}
         {{- include "packs-volume-mounts" . | nindent 8 }}
+        {{- include "pack-configs-volume-mount" . | nindent 8 }}
         - name: st2-post-start-script-vol
           mountPath: /post-start.sh
           subPath: post-start.sh
@@ -1284,9 +1283,6 @@ spec:
           configMap:
             name: {{ .Release.Name }}-st2-rbac-mappings
         {{- end }}
-        - name: st2-pack-configs-vol
-          configMap:
-            name: {{ .Release.Name }}-st2-pack-configs
         - name: st2client-config-vol
           emptyDir:
             medium: Memory
@@ -1299,6 +1295,7 @@ spec:
               # 0400 file permission
               mode: 256
         {{- include "packs-volumes" . | nindent 8 }}
+        {{- include "pack-configs-volume" . | nindent 8 }}
         - name: st2-post-start-script-vol
           configMap:
             name: {{ .Release.Name }}-st2actionrunner-post-start-script
