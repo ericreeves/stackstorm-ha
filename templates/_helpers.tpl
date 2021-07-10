@@ -192,8 +192,8 @@ Create the name of the stackstorm-ha service account to use
     - 'sh'
     - '-ec'
     - |
-      /bin/cp -aRv /opt/stackstorm/packs/. /opt/stackstorm/packs-shared &&
-      /bin/cp -aRv /opt/stackstorm/virtualenvs/. /opt/stackstorm/virtualenvs-shared && sleep 180
+      /bin/cp -aR /opt/stackstorm/packs/. /opt/stackstorm/packs-shared &&
+      /bin/cp -aR /opt/stackstorm/virtualenvs/. /opt/stackstorm/virtualenvs-shared
     {{- end }}
   {{- end }}
   {{- if or $.Values.st2.packs.images $.Values.st2.packs.volumes.enabled }}
@@ -210,8 +210,8 @@ Create the name of the stackstorm-ha service account to use
     - 'sh'
     - '-ec'
     - |
-      /bin/cp -aRv /opt/stackstorm/packs/. /opt/stackstorm/packs-shared &&
-      /bin/cp -aRv /opt/stackstorm/virtualenvs/. /opt/stackstorm/virtualenvs-shared
+      /bin/cp -aR /opt/stackstorm/packs/. /opt/stackstorm/packs-shared &&
+      /bin/cp -aR /opt/stackstorm/virtualenvs/. /opt/stackstorm/virtualenvs-shared
   {{- end }}
 {{- end -}}
 
