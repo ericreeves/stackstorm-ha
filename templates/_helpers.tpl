@@ -142,6 +142,7 @@ Create the name of the stackstorm-ha service account to use
 - name: st2-packs-vol
 {{ toYaml .Values.st2.packs.volumes.packs | indent 2 }}
 - name: st2-virtualenvs-vol
+{{ toYaml .Values.st2.packs.volumes.virtualenvs | indent 2 }}
   {{- else if .Values.st2.packs.images }}
 - name: st2-packs-vol
   emptyDir: {}
